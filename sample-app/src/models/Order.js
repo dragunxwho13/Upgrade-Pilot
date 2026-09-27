@@ -1,11 +1,13 @@
 /**
  * src/models/Order.js
  *
- * Mongoose 6 Order model.
- * Intentionally uses APIs that break under Mongoose 7:
- *   - Model.update()   (removed in v7; use updateOne/updateMany)
- *   - Model.count()    (removed in v7; use countDocuments)
- *   - callback-style query execution
+ * Mongoose 7 Order model.
+ * Migrated from Mongoose 6 by UpgradePilot.
+ *
+ * Mongoose 7 changes:
+ *   - Model.update()  → Model.updateOne()
+ *   - Model.count()   → Model.countDocuments()
+ *   - Callback-style queries → async/await
  */
 'use strict';
 
@@ -24,37 +26,31 @@ const orderSchema = new mongoose.Schema(
 );
 
 /**
- * LEGACY: uses Model.update() — removed in Mongoose 7.
- * Mongoose 7 replacement: Order.updateOne(filter, update)
+ * Migrated: uses Model.updateOne() (was Model.update())
  */
-orderSchema.statics.legacyUpdateStatus = function (id, status, cb) {
-  // Model.update() is the breaking pattern — Mongoose 7 removes this method
-  return Order.update({ _id: id }, { $set: { status } }, cb);
+orderSchema.statics.legacyUpdateStatus = async function (id, status) {
+  return Order.updateOne({ _id: id }, { $set: { status } });
 };
 
 /**
- * LEGACY: uses Model.count() — removed in Mongoose 7.
- * Mongoose 7 replacement: Order.countDocuments(filter)
+ * Migrated: uses Model.countDocuments() (was Model.count())
  */
-orderSchema.statics.legacyCount = function (filter, cb) {
-  return Order.count(filter, cb);
+orderSchema.statics.legacyCount = async function (filter) {
+  return Order.countDocuments(filter);
 };
 
 /**
- * LEGACY: callback-style query — Mongoose 7 requires promises / async-await.
+ * Migrated: async/await (was callback-style)
  */
-orderSchema.statics.legacyFindByCustomer = function (customer, cb) {
-  return Order.find({ customer }, cb);
+orderSchema.statics.legacyFindByCustomer = async function (customer) {
+  return Order.find({ customer });
 };
 
 /**
- * LEGACY: .exec(callback) — Mongoose 7 removes callback support from exec().
- * Mongoose 7 replacement: await Order.find({ customer }).exec()
+ * Migrated: async/await (was .exec(callback))
  */
-orderSchema.statics.legacyExecFind = function (customer, cb) {
-  return Order.find({ customer }).exec(function (err, docs) {
-    cb(err, docs);
-  });
+orderSchema.statics.legacyExecFind = async function (customer) {
+  return Order.find({ customer }).exec();
 };
 
 const Order = mongoose.model('Order', orderSchema);

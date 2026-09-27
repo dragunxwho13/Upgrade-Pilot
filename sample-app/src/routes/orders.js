@@ -1,15 +1,17 @@
 /**
  * src/routes/orders.js
  *
- * Express 4 order routes.
- * Intentionally contains patterns that break under Express 5:
- *   - res.send(statusCode)     → must become res.sendStatus(code)
- *   - req.param(name)          → removed; use req.params / req.query
- *   - app.del()                → removed; use app.delete()
- *   - app.get('*') wildcard    → route matching changed in Express 5
+ * Acme Orders API — Express 5 + Mongoose 7 route handlers.
+ * Migrated from Express 4 / Mongoose 6 by UpgradePilot.
  *
- * These are registered on the Router, not on `app` directly, so app.del()
- * and the wildcard are demonstrated in app.js instead.
+ * Express 5 changes:
+ *   - req.param('id')  → req.params.id
+ *   - res.send(404)    → res.sendStatus(404)
+ *
+ * Mongoose 7 changes:
+ *   - Model.update()   → Model.updateOne()
+ *   - Model.count()    → Model.countDocuments()
+ *   - callback-style find() → async/await
  */
 'use strict';
 
@@ -17,7 +19,7 @@ const express = require('express');
 const router  = express.Router();
 const Order   = require('../models/Order');
 
-// GET /orders — list all orders (promise-based, fine in both versions)
+// GET /orders — list all orders
 router.get('/', async (req, res) => {
   try {
     const orders = await Order.find({});
@@ -30,14 +32,10 @@ router.get('/', async (req, res) => {
 // GET /orders/:id — fetch one order
 router.get('/:id', async (req, res) => {
   try {
-    // LEGACY: req.param() — removed in Express 5
-    // Express 5 migration: use req.params.id directly
-    const id = req.param('id');            // ← BREAKING in Express 5
+    const id    = req.params.id;
     const order = await Order.findById(id);
     if (!order) {
-      // LEGACY: res.send(404) — removed in Express 5
-      // Express 5 migration: res.sendStatus(404)
-      return res.send(404);                // ← BREAKING in Express 5
+      return res.sendStatus(404);
     }
     res.json(order);
   } catch (err) {
@@ -56,7 +54,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /orders/:id — update an order (promise-based)
+// PUT /orders/:id — update an order
 router.put('/:id', async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(
@@ -71,37 +69,35 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// PATCH /orders/:id/status — update order status using legacy Model.update()
+// PATCH /orders/:id/status — update order status (Mongoose 7: updateOne)
 router.patch('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    // LEGACY: Model.update() — removed in Mongoose 7
-    await Order.update({ _id: req.params.id }, { $set: { status } });
+    await Order.updateOne({ _id: req.params.id }, { $set: { status } });
     res.json({ message: 'Status updated', status });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// GET /orders/count — count orders using legacy Model.count()
+// GET /orders/meta/count — count orders (Mongoose 7: countDocuments)
 router.get('/meta/count', async (req, res) => {
   try {
-    // LEGACY: Model.count() — removed in Mongoose 7
-    const total = await Order.count({});
+    const total = await Order.countDocuments({});
     res.json({ total });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /orders/customer/:name — fetch by customer using legacy callback query
-router.get('/customer/:name', (req, res) => {
-  const name = req.params.name;
-  // LEGACY: callback-style query — Mongoose 7 removes callback support
-  Order.find({ customer: name }, function (err, orders) {
-    if (err) return res.status(500).json({ error: err.message });
+// GET /orders/customer/:name — fetch by customer (Mongoose 7: async/await)
+router.get('/customer/:name', async (req, res) => {
+  try {
+    const orders = await Order.find({ customer: req.params.name });
     res.json(orders);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
