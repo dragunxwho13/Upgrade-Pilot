@@ -224,14 +224,28 @@ async function main() {
     }
 
     case 'run': {
-      console.log(`⚙️  Running upgrade pipeline on ${ctx.targetPath} …`);
-      const scanResult  = await scanner.scan(ctx);
-      const notes       = await librarian.fetchNotes(ctx, scanResult);
-      const plan        = await planner.buildPlan(ctx, scanResult, notes);
-      const codemods    = await codemoder.apply(ctx, plan);
-      const verdict     = await verifier.verify(ctx, codemods);
-      console.log(ctx.dryRun ? '[dry-run] No files written.' : '✅ Done.');
-      console.log(JSON.stringify(verdict, null, 2));
+      const dryTag = ctx.dryRun ? ' [dry-run]' : '';
+      console.error(`⚙️  Running upgrade pipeline on ${ctx.targetPath}${dryTag} …`);
+
+      const scanResult = await scanner.scan(ctx);
+      const notes      = await librarian.fetchNotes(ctx, scanResult);
+      const plan       = await planner.buildPlan(ctx, scanResult, notes);
+
+      // Pass outDir so diffs/log land in tool/out/
+      const runCtx  = { ...ctx, outDir: path.resolve(__dirname, 'out') };
+      const codemods = await codemoder.apply(runCtx, plan);
+
+      console.error(`\n${codemods.summary}`);
+      console.error(`Diffs  → ${codemods.diffDir}`);
+      console.error(`Log    → ${codemods.logPath}`);
+
+      if (!ctx.dryRun) {
+        const verdict = await verifier.verify(ctx, codemods);
+        console.error(verdict.passed ? '✅ Tests passed.' : '❌ Tests failed.');
+        if (ctx.jsonOut || ctx.format === 'json') {
+          console.log(JSON.stringify({ codemods, verdict }, null, ctx.pretty ? 2 : 0));
+        }
+      }
       break;
     }
 

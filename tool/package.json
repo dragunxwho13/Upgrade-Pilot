@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node cli.js",
-    "test":  "node --test tests/scanner.test.mjs"
+    "test":  "node --test tests/scanner.test.mjs tests/codemoder.test.mjs"
   },
   "engines": {
     "node": ">=18"

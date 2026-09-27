@@ -22,7 +22,7 @@
         {
           "id": "express/res-send-status",
           "description": "res.send(number) no longer sets the HTTP status — use res.sendStatus(number)",
-          "removedPattern": "\\.send\\s*\\(\\s*\\d{3}\\s*\\)",
+          "removedPattern": "\\.send\\s*\\(\\s*(\\d{3})\\s*\\)",
           "patternFlags": "",
           "replacement": ".sendStatus($1)",
           "severity": 3,
@@ -32,9 +32,9 @@
         {
           "id": "express/req-param",
           "description": "req.param(name) was removed — use req.params.name, req.query.name, or req.body.name",
-          "removedPattern": "req\\.param\\s*\\(",
+          "removedPattern": "req\\.param\\s*\\(\\s*['\"]([\\w]+)['\"]\\s*\\)",
           "patternFlags": "",
-          "replacement": "req.params.",
+          "replacement": "req.params.$1 /* TODO: verify source (params|query|body) */",
           "severity": 3,
           "category": "removed-api",
           "docs": "https://expressjs.com/en/guide/migrating-5.html#removed-methods"
