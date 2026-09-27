@@ -34,14 +34,20 @@ jobs:
         run: npm test
         working-directory: tool
 
-  sample-app-tests:
+   sample-app-tests:
     name: Sample-app integration tests (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false          # report each Node version independently
+      fail-fast: false
       matrix:
         node: ["18", "20", "22"]
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
 
     steps:
       - name: Checkout
@@ -52,30 +58,15 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "npm"
-          cache-dependency-path: package-lock.json   # root lock file owns all workspaces
+          cache-dependency-path: package-lock.json
 
-      # Cache the MongoDB binary that mongodb-memory-server downloads at test time.
-      # Key is OS + package version so the binary is reused across runs.
-      - name: Cache MongoDB binary
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/mongodb-binaries
-          key: mongodb-binary-${{ runner.os }}-mms-8.16.0
-
-      # Install everything from the root using the committed lock file.
-      # --ignore-scripts prevents the postinstall binary-download from running at
-      # install time (it happens on-demand during beforeAll instead, using the cache
-      # path set by MONGOMS_PREFER_GLOBAL_PATH).
       - name: Install workspace dependencies (root)
         run: npm ci --ignore-scripts
-        env:
-          MONGOMS_DISABLE_POSTINSTALL: "1"
 
       - name: Run sample-app integration tests
-        run: npm test --workspace=sample-app -- --forceExit
+        run: npm test --workspace=sample-app
         env:
-          # Tell MMS to store/find the binary in the cached directory
-          MONGOMS_PREFER_GLOBAL_PATH: "1"
+          MONGODB_URI: mongodb://127.0.0.1:27017/acme_test
         timeout-minutes: 5
 
   cli-smoke-test:
