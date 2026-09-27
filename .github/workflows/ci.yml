@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/mongodb-binaries
-          key: mongodb-binary-${{ runner.os }}-mms-8.16.0
+          key: mongodb-binary-${{ runner.os }}-mongo-7.0.14
 
       # Install everything from the root using the committed lock file.
       # --ignore-scripts prevents the postinstall binary-download from running at
@@ -76,6 +76,9 @@ jobs:
         env:
           # Tell MMS to store/find the binary in the cached directory
           MONGOMS_PREFER_GLOBAL_PATH: "1"
+          # Ubuntu-latest runners no longer ship libcrypto.so.1.1.
+          # Pin a MongoDB binary that is OpenSSL 3 compatible.
+          MONGOMS_VERSION: "7.0.14"
         timeout-minutes: 5
 
   cli-smoke-test:
