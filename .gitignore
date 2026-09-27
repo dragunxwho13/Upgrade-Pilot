@@ -49,3 +49,10 @@ coverage/
 tmp/
 temp/
 .cache/
+
+# UpgradePilot generated artefacts
+tool/out/
+
+# Allow evidence screenshots
+!ibm-bob-evidence/*.png
+

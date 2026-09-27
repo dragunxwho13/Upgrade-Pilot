@@ -8,6 +8,10 @@ tmp/
 temp/
 .cache/
 
+# Generated artefacts — large JSON/patch files
+tool/out/
+sample-app/node_modules/
+
 # Secrets / credentials
 .env
 .env.*

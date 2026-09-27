@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  tool-unit-tests:
+    name: Tool unit tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node: ["18", "20", "22"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+
+      - name: Install root workspace dependencies
+        run: npm install --workspaces --if-present
+
+      - name: Install tool dependencies
+        run: npm install
+        working-directory: tool
+
+      - name: Run tool unit tests (scanner + codemoder)
+        run: npm test
+        working-directory: tool
+
+  sample-app-tests:
+    name: Sample-app integration tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node: ["18", "20", "22"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+
+      - name: Install sample-app dependencies
+        run: npm install
+        working-directory: sample-app
+
+      - name: Run sample-app integration tests (12 supertest tests)
+        run: npm test
+        working-directory: sample-app
+        timeout-minutes: 5
+
+  cli-smoke-test:
+    name: CLI smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install tool dependencies
+        run: npm install
+        working-directory: tool
+
+      - name: Verify --help exits 0
+        run: node tool/cli.js --help
+
+      - name: Verify scan subcommand runs against sample-app
+        run: node tool/cli.js scan --path ./sample-app --json > /dev/null
