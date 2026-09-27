@@ -250,13 +250,24 @@ test('16. scanner.scan() on fixtures/ returns a valid ScanResult', async () => {
   assert.ok(typeof result.summary === 'string',  'summary is string');
 });
 
-// 17. usageMap contains the expected rule IDs
+// 17. usageMap contains keys for all rules active in the detected ecosystem
 test('17. scanner.scan() usageMap has keys for all active rules', async () => {
-  const result  = await scanner.scan({ targetPath: FIXTURES, verbose: false, dryRun: false });
-  const db      = loadRules();
-  const allIds  = db.packages.flatMap(p => p.rules.map(r => r.id));
-  for (const id of allIds) {
+  const result     = await scanner.scan({ targetPath: FIXTURES, verbose: false, dryRun: false });
+  const db         = loadRules();
+  // Only check rules belonging to the detected ecosystem (node for fixtures/)
+  const ecosystem  = result.ecosystem || 'node';
+  const activeIds  = db.packages
+    .filter(p => (p.ecosystem || 'node') === ecosystem)
+    .flatMap(p => p.rules.map(r => r.id));
+  for (const id of activeIds) {
     assert.ok(id in result.usageMap, `usageMap contains key: ${id}`);
+  }
+  // Python rules should NOT appear in a node-ecosystem scan
+  const pythonIds = db.packages
+    .filter(p => p.ecosystem === 'python')
+    .flatMap(p => p.rules.map(r => r.id));
+  for (const id of pythonIds) {
+    assert.ok(!(id in result.usageMap), `Python rule ${id} should not be in node usageMap`);
   }
 });
 

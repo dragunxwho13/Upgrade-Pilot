@@ -1,8 +1,8 @@
 # UpgradePilot
 
-> **AI-powered agentic co-pilot that scans, plans, applies, and verifies Node.js dependency upgrades — fully automated, diff-reviewed, and test-gated.**
+> **AI-powered agentic co-pilot that scans, plans, applies, and verifies dependency upgrades — fully automated, diff-reviewed, and test-gated. Supports Node.js and Python projects.**
 
-Built live with **IBM Bob 2.0** during a single hackathon session: five named task sessions, six subagents, 45+ unit tests, and a complete Express 4 → 5 / Mongoose 6 → 7 migration that goes from 12 legacy-pattern hits to **12/12 tests green on new majors** with zero manual edits.
+Built live with **IBM Bob 2.0** during a hackathon: six named task sessions, 67 unit tests, a complete Express 4→5 / Mongoose 6→7 Node.js migration, and a Python Flask 2→3 generalization — both pipelines proven end-to-end with `upgradepilot demo`.
 
 ---
 
@@ -55,7 +55,7 @@ Built live with **IBM Bob 2.0** during a single hackathon session: five named ta
   <rect x="80" y="130" width="140" height="56" rx="6" fill="#1f2328"/>
   <text x="150" y="150" text-anchor="middle" fill="#fff" font-weight="600">codemoder.js</text>
   <text x="150" y="166" text-anchor="middle" fill="#9ca3af" font-size="11">parallel crew</text>
-  <text x="150" y="180" text-anchor="middle" fill="#9ca3af" font-size="10">express · mongoose · jest</text>
+  <text x="150" y="180" text-anchor="middle" fill="#9ca3af" font-size="10">node · python</text>
 
   <!-- Verifier -->
   <rect x="315" y="130" width="140" height="56" rx="6" fill="#1f2328"/>
@@ -90,7 +90,7 @@ Built live with **IBM Bob 2.0** during a single hackathon session: five named ta
   <!-- data/breaking-changes.json feeds both scanner and codemoder -->
   <rect x="230" y="272" width="200" height="34" rx="5" fill="#fef3c7" stroke="#fbbf24"/>
   <text x="330" y="286" text-anchor="middle" fill="#92400e" font-size="11" font-weight="600">data/breaking-changes.json</text>
-  <text x="330" y="300" text-anchor="middle" fill="#92400e" font-size="10">11 rules · 3 packages · severity weights</text>
+  <text x="330" y="300" text-anchor="middle" fill="#92400e" font-size="10">18 rules · 5 packages · node + python</text>
   <line x1="330" y1="272" x2="225" y2="186" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 3"/>
   <line x1="330" y1="272" x2="150" y2="186" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 3"/>
 
@@ -109,6 +109,7 @@ Built live with **IBM Bob 2.0** during a single hackathon session: five named ta
 
 ### Prerequisites
 - **Node.js ≥ 18** · **npm ≥ 9**
+- **Python ≥ 3.9** · **pip** (for the Python sample app)
 
 ```bash
 # Clone and install
@@ -120,30 +121,34 @@ npm install
 node tool/cli.js --help
 ```
 
-### Run the full pipeline against the included legacy app
+### Run the full pipeline against both included legacy apps
 
 ```bash
-# Step 1 — Scan for breaking patterns
+# One-shot demo — runs both apps, prints reports for each ecosystem
+node tool/cli.js demo
+
+# Node.js app only (Acme Orders API — Express 4→5, Mongoose 6→7)
 node tool/cli.js scan --path ./sample-app
-
-# Step 2 — Generate the risk-scored migration plan
 node tool/cli.js plan --path ./sample-app
-
-# Step 3 — Apply codemods (dry-run: diffs only, no file writes)
 node tool/cli.js run  --path ./sample-app --dry-run
 
-# Step 4 — One-shot demo (scan → plan → codemod → report)
-node tool/cli.js demo
+# Python app only (Acme Inventory API — Flask 2→3, requests 2.28→2.32)
+node tool/cli.js scan --path ./sample-app2
+node tool/cli.js plan --path ./sample-app2
+node tool/cli.js run  --path ./sample-app2 --dry-run
 ```
 
 ### Run the unit test suites
 
 ```bash
-# tool/ — 45 unit tests (scanner + codemoder) — Node 18 native test runner
+# tool/ — 67 unit tests (scanner + codemoder + python-scanner) — Node 18 native runner
 cd tool && npm test
 
 # sample-app/ — 12 supertest integration tests on Express 5 + Mongoose 7 + Jest 29
 cd sample-app && npm test
+
+# sample-app2/ — 12 pytest integration tests on Flask 2.3.x + requests 2.28.x
+cd sample-app2 && python -m pytest test_app.py -v
 ```
 
 ---
@@ -152,11 +157,11 @@ cd sample-app && npm test
 
 | Subcommand | What it does | Key output |
 |------------|-------------|------------|
-| `scan`     | Glob all `.js` files, match 11 breaking-change rules, score risk | `tool/out/usage-map.json` |
+| `scan`     | Auto-detect ecosystem (Node/Python), match 18 breaking-change rules, score risk | `tool/out/usage-map.json` |
 | `plan`     | Build ordered upgrade plan with effort estimates | `tool/out/migration-plan.json` + `MIGRATION_PLAN.md` |
-| `run`      | Parallel codemod crew (Promise.all per package) | `tool/out/diffs/<pkg>.patch` + `codemod-log.json` |
+| `run`      | Parallel codemod crew (Promise.all per package), ecosystem-aware file collection | `tool/out/diffs/<pkg>.patch` + `codemod-log.json` |
 | `report`   | Render Markdown or JSON upgrade summary | stdout / file |
-| `demo`     | Run the full pipeline on the built-in sample-app | all of the above |
+| `demo`     | Run the full pipeline on **both** built-in sample apps (Node.js + Python) | all of the above |
 
 **Flags available on all subcommands:**
 
@@ -178,29 +183,33 @@ upgradepilot/
 ├── tool/
 │   ├── cli.js                     # Entry point — subcommand dispatch
 │   ├── data/
-│   │   └── breaking-changes.json  # 11 rules × 3 packages with severity weights
-│   ├── out/                       # Generated artefacts (gitignored in CI)
+│   │   ├── breaking-changes.json  # 18 rules × 5 packages (node + python) with severity weights
+│   │   └── flask-3-migration.md   # Librarian corpus — Flask 2→3 migration guide
+│   ├── out/                       # Generated artefacts (gitignored)
 │   │   ├── usage-map.json
 │   │   ├── migration-plan.json
 │   │   ├── MIGRATION_PLAN.md
 │   │   ├── codemod-log.json
 │   │   ├── verification.json
 │   │   └── diffs/
-│   │       ├── express.patch
-│   │       ├── mongoose.patch
-│   │       └── jest.patch
 │   ├── src/agents/
-│   │   ├── scanner.js
-│   │   ├── librarian.js
+│   │   ├── scanner.js             # Multi-ecosystem: Node (.js) + Python (.py + requirements.txt)
+│   │   ├── librarian.js           # express, mongoose, jest, flask, requests knowledge base
 │   │   ├── planner.js
-│   │   ├── codemoder.js
+│   │   ├── codemoder.js           # Ecosystem-aware file collection
 │   │   ├── verifier.js
 │   │   └── scribe.js
 │   └── tests/
-│       ├── fixtures/              # Tiny legacy JS files for unit tests
-│       ├── scanner.test.mjs       # 20 tests
-│       └── codemoder.test.mjs     # 25 tests
-├── sample-app/                    # "Acme Orders API" — now on Express 5 + Mongoose 7
+│       ├── fixtures/              # Legacy JS + Python fixture files for unit tests
+│       ├── scanner.test.mjs       # 20 tests (Node scanner)
+│       ├── codemoder.test.mjs     # 25 tests (codemod crew)
+│       └── python-scanner.test.mjs # 22 tests (Python ecosystem)
+├── sample-app/                    # "Acme Orders API" — Node.js, Express 5 + Mongoose 7
+├── sample-app2/                   # "Acme Inventory API" — Python, Flask 2.3.x + requests 2.28.x
+│   ├── app.py                     # 6 deliberate breaking patterns (flask/escape, Markup, etc.)
+│   ├── requirements.txt           # Pinned to Flask==2.3.3, requests==2.28.2
+│   ├── test_app.py                # 12 pytest integration tests — 12/12 pass
+│   └── conftest.py
 ├── docs/
 │   ├── ARCHITECTURE.md            # LLM delegation design (watsonx.ai Granite)
 │   └── DEMO-SCRIPT.md             # Exact commands for the 3-minute demo video
@@ -211,7 +220,7 @@ upgradepilot/
 
 ## Metrics
 
-Real results from upgrading the built-in sample-app (Express 4→5, Mongoose 6→7, Jest 27→29):
+### Node.js pipeline — Acme Orders API (Express 4→5, Mongoose 6→7, Jest 27→29)
 
 | Metric | Baseline (manual) | UpgradePilot |
 |--------|:-----------------:|:------------:|
@@ -222,14 +231,33 @@ Real results from upgrading the built-in sample-app (Express 4→5, Mongoose 6�
 | **Time saved** | — | **980 min (81%)** |
 | Fix cycles needed | n/a | **0** |
 | Tests passing on new majors | — | **12 / 12** |
-| Unit tests in tool suite | — | **45 / 45** |
 | Legacy source hits after upgrade | — | **0** |
+
+### Python pipeline — Acme Inventory API (Flask 2→3, requests 2.28→2.32)
+
+| Metric | Value |
+|--------|-------|
+| Breaking patterns found | **13 hits, 6 rules** |
+| Packages flagged | **flask** (high risk, score 66/100) · **requests** (low risk, score 13/100) |
+| Estimated manual migration | **216 min** |
+| Estimated pilot migration | **41 min** |
+| **Time saved** | **175 min (81%)** |
+| Tests on legacy version (Flask 2.3.x) | **12 / 12** |
+
+### Tool test suite
+
+| Suite | Tests |
+|-------|-------|
+| `scanner.test.mjs` — Node scanner | **20 / 20** |
+| `codemoder.test.mjs` — codemod crew | **25 / 25** |
+| `python-scanner.test.mjs` — Python ecosystem | **22 / 22** |
+| **Total** | **67 / 67** |
 
 ---
 
 ## How IBM Bob 2.0 built this
 
-This entire project was scaffolded and implemented across **five named task sessions** using **IBM Bob 2.0** in Agent mode. Each session had a declared Definition of Done that was verified before closing.
+This entire project was scaffolded and implemented across **six named task sessions** using **IBM Bob 2.0** in Agent mode. Each session had a declared Definition of Done that was verified before closing.
 
 | # | Task Session | Bob Delivered | DoD |
 |---|-------------|---------------|-----|
@@ -238,6 +266,8 @@ This entire project was scaffolded and implemented across **five named task sess
 | 3 | **Planner: risk-scored migration plan** | `buildPlan()` with occurrence×severity×proximity formula, safe upgrade ordering, effort estimates, Markdown renderer, `docs/ARCHITECTURE.md` LLM delegation design | `migration-plan.json` + `MIGRATION_PLAN.md` generated; times on every step |
 | 4 | **Codemod Crew: parallel per-package migrations** | `Promise.all` worker-per-package architecture, pure-JS unified differ, `codemod-log.json`, 3 patch files, 25 unit tests | dry-run produces 3 patches + log with 0 file writes; tests pass |
 | 5 | **Verifier: tests to green** | Real-mode verifier (bump → install → test → fix-cycle), dry-run scanner mode, `verification.json`, full Express 5 + Mongoose 7 migration | 12/12 tests green on new majors; dry-run shows 0 legacy source hits |
+| 6 | **Submission polish** | Root README rewritten, CI workflow (`.github/workflows/ci.yml`), demo script (`docs/DEMO-SCRIPT.md`), evidence folder | CI green; demo script complete |
+| 7 | **Stretch: Python pipeline generalization** | `sample-app2/` Flask 2.3.x app with 6 breaking patterns + 12 pytest tests, Flask/requests rules added to `breaking-changes.json`, scanner/codemoder/librarian extended for Python ecosystem, 22 new Python unit tests, demo runs both apps | `node tool/cli.js demo` outputs reports for both ecosystems; 67/67 tests pass |
 
 All sessions ran with `--verbose` logging; screenshots are in [`ibm-bob-evidence/`](ibm-bob-evidence/README.md).
 
@@ -248,8 +278,10 @@ All sessions ran with `--verbose` logging; screenshots are in [`ibm-bob-evidence
 Pull requests welcome. Before opening a PR:
 
 ```bash
-cd tool && npm test          # must be 45/45
-cd sample-app && npm test    # must be 12/12
+cd tool && npm test                                          # must be 67/67
+cd sample-app && npm test                                    # must be 12/12
+cd sample-app2 && python -m pytest test_app.py -v           # must be 12/12
+node tool/cli.js demo                                        # must print both reports
 ```
 
 ---

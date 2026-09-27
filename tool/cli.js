@@ -260,16 +260,45 @@ async function main() {
     }
 
     case 'demo': {
-      console.log('🎬 Running full demo pipeline on built-in sample-app …');
-      const demoCtx = { ...ctx, targetPath: path.resolve(__dirname, '../sample-app') };
-      const scanResult = await scanner.scan(demoCtx);
-      const notes      = await librarian.fetchNotes(demoCtx, scanResult);
-      const plan       = await planner.buildPlan(demoCtx, scanResult, notes);
-      const codemods   = await codemoder.apply({ ...demoCtx, dryRun: true }, plan);
-      const verdict    = await verifier.verify(demoCtx, codemods);
-      const report     = await scribe.write(demoCtx, plan);
-      console.log('\n─── UPGRADE REPORT ────────────────────────────────────\n');
-      console.log(report);
+      // ── helper: run full pipeline on one target and print report ────────────
+      async function runDemoPipeline(label, targetDir) {
+        console.log(`\n${'═'.repeat(60)}`);
+        console.log(`🎬  ${label}`);
+        console.log(`    target: ${targetDir}`);
+        console.log('═'.repeat(60));
+        const demoCtx = { ...ctx, targetPath: path.resolve(targetDir), dryRun: true };
+        const scanResult = await scanner.scan(demoCtx);
+        console.log(`\n[scan]   ${scanResult.summary}`);
+        console.log(`[scan]   ecosystem: ${scanResult.ecosystem}`);
+        const notes    = await librarian.fetchNotes(demoCtx, scanResult);
+        const plan     = await planner.buildPlan(demoCtx, scanResult, notes);
+        const codemods = await codemoder.apply(demoCtx, plan);
+        console.log(`[codemod] ${codemods.summary}`);
+        const verdict  = await verifier.verify(demoCtx, codemods);
+        console.log(`[verify]  ${verdict.passed ? '✅ clean' : '⚠️  issues found'} — ${verdict.summary || 'dry-run complete'}`);
+        const report   = await scribe.write(demoCtx, plan);
+        console.log('\n─── UPGRADE REPORT ─────────────────────────────────────\n');
+        console.log(report);
+      }
+
+      // Determine which apps to demo (--path overrides; default = both built-ins)
+      if (opts.path) {
+        // explicit target — run just that one
+        await runDemoPipeline('Custom target', ctx.targetPath);
+      } else {
+        // Run on both built-in sample apps
+        await runDemoPipeline(
+          'Sample App 1 — Acme Orders API  (Node.js / Express + Mongoose)',
+          path.resolve(__dirname, '../sample-app'),
+        );
+        await runDemoPipeline(
+          'Sample App 2 — Acme Inventory API  (Python / Flask + requests)',
+          path.resolve(__dirname, '../sample-app2'),
+        );
+        console.log(`\n${'═'.repeat(60)}`);
+        console.log('✅  Demo complete — both ecosystems processed.');
+        console.log('═'.repeat(60));
+      }
       break;
     }
 

@@ -28,46 +28,66 @@ import path from 'path';
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 function toMarkdown(plan) {
+  // Support both planner output shape (plan.packages) and legacy shape (plan.steps)
+  const packages   = plan.packages || plan.steps || [];
+  const riskScore  = plan.totalRiskScore ?? plan.riskScore ?? 0;
+  const ecosystem  = plan.ecosystem ? ` (${plan.ecosystem})` : '';
+
   const lines = [
-    `# UpgradePilot Upgrade Report`,
+    `# UpgradePilot Upgrade Report${ecosystem}`,
     ``,
     `**Project:** \`${plan.projectPath}\`  `,
     `**Generated:** ${plan.createdAt}  `,
-    `**Aggregate Risk Score:** ${plan.riskScore}/100  `,
+    `**Aggregate Risk Score:** ${riskScore}/100  `,
     `**Summary:** ${plan.summary}`,
     ``,
     `---`,
     ``,
   ];
 
-  if (plan.steps.length === 0) {
-    lines.push('> ✅ Nothing to upgrade — all dependencies are up-to-date.');
+  if (packages.length === 0) {
+    lines.push('> ✅ Nothing to upgrade — no breaking changes detected.');
+    lines.push('');
   }
 
-  for (const step of plan.steps) {
+  for (const pkg of packages) {
+    const riskEmoji = pkg.risk === 'high' ? '🔴' : pkg.risk === 'medium' ? '🟡' : '🟢';
     lines.push(
-      `## Step ${step.order} — \`${step.package}\``,
+      `## Step ${pkg.order} — \`${pkg.package}\` ${riskEmoji}`,
       ``,
       `| Field | Value |`,
       `|-------|-------|`,
-      `| Current version | \`${step.fromVersion}\` |`,
-      `| Target version  | \`${step.toVersion}\`  |`,
-      `| Risk level      | **${step.risk}** (${step.riskScore}/100) |`,
+      `| Current version | \`${pkg.from ?? pkg.fromVersion ?? '?'}\` |`,
+      `| Target version  | \`${pkg.to ?? pkg.toVersion ?? '?'}\`   |`,
+      `| Risk level      | **${pkg.risk}** (${pkg.riskScore}/100) |`,
+      `| Affected files  | ${pkg.affectedFileCount ?? 0} |`,
+      `| Manual effort   | ${pkg.estimatedManualMinutes ?? '?'} min |`,
+      `| Pilot effort    | ${pkg.estimatedPilotMinutes ?? '?'} min |`,
       ``,
     );
 
-    if (step.migrationSteps.length) {
+    // Rule-level actions
+    const steps = pkg.steps || pkg.migrationSteps || [];
+    if (steps.length) {
       lines.push('### Migration steps', '');
-      step.migrationSteps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
+      if (typeof steps[0] === 'string') {
+        steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
+      } else {
+        steps.filter(s => s.occurrences > 0).forEach((s, i) =>
+          lines.push(`${i + 1}. **[${s.ruleId}]** ${s.action}`)
+        );
+      }
       lines.push('');
     }
 
-    if (step.references.length) {
+    const refs = pkg.references || [];
+    if (refs.length) {
       lines.push('### References', '');
-      step.references.forEach(r => lines.push(`- <${r}>`));
+      refs.forEach(r => lines.push(`- <${r}>`));
       lines.push('');
     }
 
+    lines.push(`> **Rollback:** ${pkg.rollbackNote || 'Revert changes via git.'}`, '');
     lines.push('---', '');
   }
 

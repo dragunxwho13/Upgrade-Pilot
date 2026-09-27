@@ -102,9 +102,12 @@ function loadPackageRules() {
 }
 
 // ─── File collection ──────────────────────────────────────────────────────────
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', 'out', '.nyc_output']);
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', 'dist', 'build', 'coverage', 'out', '.nyc_output',
+  '__pycache__', '.venv', 'venv', '.tox', '.mypy_cache', '.pytest_cache',
+]);
 
-function collectJsFiles(dir) {
+function collectSourceFiles(dir, extRe) {
   const results = [];
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
@@ -112,10 +115,15 @@ function collectJsFiles(dir) {
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue;
     const full = path.join(dir, e.name);
-    if (e.isDirectory())  results.push(...collectJsFiles(full));
-    else if (e.isFile() && /\.(js|mjs|cjs)$/.test(e.name)) results.push(full);
+    if (e.isDirectory())  results.push(...collectSourceFiles(full, extRe));
+    else if (e.isFile() && extRe.test(e.name)) results.push(full);
   }
   return results;
+}
+
+// Backwards-compatible alias for existing tests
+function collectJsFiles(dir) {
+  return collectSourceFiles(dir, /\.(js|mjs|cjs)$/);
 }
 
 // ─── Pure-JS unified differ ───────────────────────────────────────────────────
@@ -365,9 +373,12 @@ async function apply(ctx, plan) {
   // 2. Load rule map
   const packageRuleMap = loadPackageRules();
 
-  // 3. Collect JS files once (shared read-only across workers)
-  const jsFiles = collectJsFiles(targetPath);
-  dbg(`Found ${jsFiles.length} JS files`);
+  // 3. Collect source files — ecosystem-aware
+  //    The plan carries ecosystem from the scan result (may be undefined for old plans)
+  const ecosystem = plan.ecosystem || ctx.ecosystem || 'node';
+  const extRe     = ecosystem === 'python' ? /\.py$/ : /\.(js|mjs|cjs)$/;
+  const jsFiles   = collectSourceFiles(targetPath, extRe);
+  dbg(`Found ${jsFiles.length} ${ecosystem === 'python' ? 'Python' : 'JS'} files`);
 
   // 4. Determine which packages to process (those in the plan AND with rules)
   const packagesToRun = (plan.packages || plan.steps || [])

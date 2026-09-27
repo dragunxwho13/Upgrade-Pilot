@@ -136,6 +136,84 @@
           "docs": "https://jestjs.io/docs/upgrading-to-jest28#jasmine-runner-dropped"
         }
       ]
+    },
+    {
+      "package": "flask",
+      "ecosystem": "python",
+      "fromVersion": "2",
+      "toVersion": "3",
+      "migrationGuide": "https://flask.palletsprojects.com/en/3.0.x/changes/",
+      "rules": [
+        {
+          "id": "flask/escape-import",
+          "description": "flask.escape was deprecated in Flask 2.0 and removed in Flask 3 — use markupsafe.escape",
+          "removedPattern": "from flask import[^\\n]*\\bescape\\b",
+          "patternFlags": "",
+          "replacement": "from markupsafe import escape",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://flask.palletsprojects.com/en/3.0.x/changes/#version-3-0-0"
+        },
+        {
+          "id": "flask/markup-import",
+          "description": "flask.Markup was deprecated in Flask 2.0 and removed in Flask 3 — use markupsafe.Markup",
+          "removedPattern": "from flask import[^\\n]*\\bMarkup\\b",
+          "patternFlags": "",
+          "replacement": "from markupsafe import Markup",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://flask.palletsprojects.com/en/3.0.x/changes/#version-3-0-0"
+        },
+        {
+          "id": "flask/json-sort-keys-config",
+          "description": "app.config['JSON_SORT_KEYS'] was removed in Flask 3 — configure via json_provider_class",
+          "removedPattern": "\\bJSON_SORT_KEYS\\b",
+          "patternFlags": "",
+          "replacement": "# JSON_SORT_KEYS removed — use app.json_provider_class",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://flask.palletsprojects.com/en/3.0.x/changes/#version-3-0-0"
+        },
+        {
+          "id": "flask/jsonify-prettyprint-config",
+          "description": "app.config['JSONIFY_PRETTYPRINT_REGULAR'] was removed in Flask 3",
+          "removedPattern": "\\bJSONIFY_PRETTYPRINT_REGULAR\\b",
+          "patternFlags": "",
+          "replacement": "# JSONIFY_PRETTYPRINT_REGULAR removed — use app.json_provider_class",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://flask.palletsprojects.com/en/3.0.x/changes/#version-3-0-0"
+        },
+        {
+          "id": "flask/flask-env",
+          "description": "FLASK_ENV environment variable was removed in Flask 3 — use FLASK_DEBUG or app.config['DEBUG']",
+          "removedPattern": "FLASK_ENV",
+          "patternFlags": "",
+          "replacement": "FLASK_DEBUG",
+          "severity": 1,
+          "category": "removed-api",
+          "docs": "https://flask.palletsprojects.com/en/3.0.x/config/#environment-and-debug-features"
+        }
+      ]
+    },
+    {
+      "package": "requests",
+      "ecosystem": "python",
+      "fromVersion": "2",
+      "toVersion": "2.28+",
+      "migrationGuide": "https://docs.python-requests.org/en/latest/community/updates/",
+      "rules": [
+        {
+          "id": "requests/packages-urllib3",
+          "description": "requests.packages.urllib3 is a private shim — import urllib3 directly",
+          "removedPattern": "from requests\\.packages import urllib3",
+          "patternFlags": "",
+          "replacement": "import urllib3",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://github.com/psf/requests/blob/main/HISTORY.md"
+        }
+      ]
     }
   ]
 }

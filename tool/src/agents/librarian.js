@@ -25,6 +25,7 @@
  */
 
 // ─── Embedded migration knowledge base ───────────────────────────────────────
+// Node.js ecosystem entries
 const MIGRATION_DB = {
   express: {
     breakingSummary: 'Express 5 removes several deprecated APIs from v4: app.del(), res.send(number), req.param(), and changes wildcard route matching.',
@@ -64,6 +65,35 @@ const MIGRATION_DB = {
     references: [
       'https://jestjs.io/docs/upgrading-to-jest28',
       'https://jestjs.io/docs/upgrading-to-jest29',
+    ],
+  },
+
+  // ── Python ecosystem entries ───────────────────────────────────────────────
+  flask: {
+    breakingSummary: 'Flask 3.0 removes flask.escape, flask.Markup, several legacy config keys (JSON_SORT_KEYS, JSONIFY_PRETTYPRINT_REGULAR), and the FLASK_ENV environment variable.',
+    migrationSteps: [
+      'Replace `from flask import escape` with `from markupsafe import escape`',
+      'Replace `from flask import Markup` with `from markupsafe import Markup`',
+      'Remove app.config[\'JSON_SORT_KEYS\'] — configure via app.json_provider_class instead',
+      'Remove app.config[\'JSONIFY_PRETTYPRINT_REGULAR\'] — use DefaultJSONProvider',
+      'Replace FLASK_ENV environment variable with FLASK_DEBUG or app.config[\'DEBUG\']',
+      'See flask-3-migration.md in tool/data/ for the full corpus of changes',
+    ],
+    references: [
+      'https://flask.palletsprojects.com/en/3.0.x/changes/',
+      'https://flask.palletsprojects.com/en/3.0.x/upgrading/',
+      'tool/data/flask-3-migration.md',
+    ],
+  },
+  requests: {
+    breakingSummary: 'The requests.packages.urllib3 private shim was removed — import urllib3 directly.',
+    migrationSteps: [
+      'Replace `from requests.packages import urllib3` with `import urllib3`',
+      'Replace `requests.packages.urllib3.disable_warnings()` with `urllib3.disable_warnings()`',
+    ],
+    references: [
+      'https://docs.python-requests.org/en/latest/community/updates/',
+      'https://github.com/psf/requests/blob/main/HISTORY.md',
     ],
   },
 };

@@ -109,9 +109,19 @@ const TARGET_VERSIONS = {
 
 // Per-package rollback notes
 const ROLLBACK_NOTES = {
+  // Node
   express:  'Pin express back to "4.18.2" in package.json and run `npm install`. Revert any codemod changes via git.',
   mongoose: 'Pin mongoose back to "6.12.3" in package.json and run `npm install`. Restore callback-style queries if async refactor was partial.',
   jest:     'Pin jest back to "27.5.1" in package.json. Restore testRunner config if changed.',
+  // Python
+  flask:    'Pin Flask back to "Flask==2.3.3" in requirements.txt and run `pip install -r requirements.txt`. Revert any codemod changes via git.',
+  requests: 'Pin requests back to "requests==2.28.2" in requirements.txt and run `pip install -r requirements.txt`.',
+};
+
+// Per-package upgrade targets for Python (Node targets already in TARGET_VERSIONS)
+const PYTHON_TARGET_VERSIONS = {
+  flask:    '>=3.0,<4.0',
+  requests: '>=2.32,<3.0',
 };
 
 // Manual effort constants (minutes per hit × severity)
@@ -261,7 +271,7 @@ function synthesisePlan(scanResult, noteMap, ruleIndex) {
     packageSteps.push({
       package:    pkgName,
       from:       dep.current,
-      to:         TARGET_VERSIONS[pkgName] ?? `^${dep.current}`,
+      to:         TARGET_VERSIONS[pkgName] ?? PYTHON_TARGET_VERSIONS[pkgName] ?? `>=${dep.current}`,
       type:       depInfo.type ?? 'prod',
       risk:       riskLabel(pkgRiskScore),
       riskScore:  pkgRiskScore,
@@ -330,6 +340,7 @@ async function buildPlan(ctx, scanResult, noteMap) {
   const plan = {
     schemaVersion:       '1.0',
     projectPath:         scanResult.projectPath,
+    ecosystem:           scanResult.ecosystem || 'node',
     createdAt:           new Date().toISOString(),
     totalRiskScore,
     totalManualMinutes:  totalManual,
