@@ -33,14 +33,20 @@ let app;
 let mongoServer;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  await mongoose.connect(mongoServer.getUri(), { dbName: 'acme_test' });
+  if (process.env.MONGODB_URI) {
+    // CI path: real MongoDB from a service container
+    await mongoose.connect(process.env.MONGODB_URI, { dbName: 'acme_test' });
+  } else {
+    // Local dev path: in-memory MongoDB (unchanged)
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri(), { dbName: 'acme_test' });
+  }
   app = createApp();
 });
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongoServer.stop();
+  if (mongoServer) await mongoServer.stop();
 });
 
 beforeEach(async () => {
