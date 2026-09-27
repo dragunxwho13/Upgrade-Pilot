@@ -1,4 +1,12 @@
-﻿# Dependencies
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -55,4 +63,5 @@ tool/out/
 
 # Allow evidence screenshots
 !ibm-bob-evidence/*.png
+
 

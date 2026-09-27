@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         node: ["18", "20", "22"]
 
@@ -24,15 +25,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "npm"
+          cache-dependency-path: package-lock.json
 
-      - name: Install root workspace dependencies
-        run: npm install --workspaces --if-present
+      - name: Install workspace dependencies (root)
+        run: npm ci --ignore-scripts
 
-      - name: Install tool dependencies
-        run: npm install
-        working-directory: tool
-
-      - name: Run tool unit tests (scanner + codemoder)
+      - name: Run tool unit tests
         run: npm test
         working-directory: tool
 
@@ -41,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false          # report each Node version independently
       matrix:
         node: ["18", "20", "22"]
 
@@ -53,14 +52,30 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "npm"
+          cache-dependency-path: package-lock.json   # root lock file owns all workspaces
 
-      - name: Install sample-app dependencies
-        run: npm install
-        working-directory: sample-app
+      # Cache the MongoDB binary that mongodb-memory-server downloads at test time.
+      # Key is OS + package version so the binary is reused across runs.
+      - name: Cache MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binary-${{ runner.os }}-mms-8.16.0
 
-      - name: Run sample-app integration tests (12 supertest tests)
-        run: npm test
-        working-directory: sample-app
+      # Install everything from the root using the committed lock file.
+      # --ignore-scripts prevents the postinstall binary-download from running at
+      # install time (it happens on-demand during beforeAll instead, using the cache
+      # path set by MONGOMS_PREFER_GLOBAL_PATH).
+      - name: Install workspace dependencies (root)
+        run: npm ci --ignore-scripts
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: "1"
+
+      - name: Run sample-app integration tests
+        run: npm test --workspace=sample-app -- --forceExit
+        env:
+          # Tell MMS to store/find the binary in the cached directory
+          MONGOMS_PREFER_GLOBAL_PATH: "1"
         timeout-minutes: 5
 
   cli-smoke-test:
@@ -76,10 +91,10 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: package-lock.json
 
-      - name: Install tool dependencies
-        run: npm install
-        working-directory: tool
+      - name: Install workspace dependencies (root)
+        run: npm ci --ignore-scripts
 
       - name: Verify --help exits 0
         run: node tool/cli.js --help
