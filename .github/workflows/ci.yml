@@ -34,7 +34,7 @@ jobs:
         run: npm test
         working-directory: tool
 
-   sample-app-tests:
+  sample-app-tests:
     name: Sample-app integration tests (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
 
