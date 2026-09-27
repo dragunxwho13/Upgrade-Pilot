@@ -15,6 +15,9 @@
  * Options:
  *   --path <dir>         Target project directory (default: cwd)
  *   --format <fmt>       Output format: markdown | json  (default: markdown)
+ *   --json               Alias for --format json (scan subcommand)
+ *   --pretty             Pretty-print JSON output (scan subcommand)
+ *   --out <file>         Save scan output to this file (default: tool/out/usage-map.json)
  *   --dry-run            Simulate changes without writing files
  *   --verbose            Print detailed agent logs
  *   --help, -h           Show this help message
@@ -24,6 +27,7 @@
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs   from 'fs';
 import { scanner }  from './src/agents/scanner.js';
 import { librarian } from './src/agents/librarian.js';
 import { planner }  from './src/agents/planner.js';
@@ -72,7 +76,7 @@ Usage:
   upgradepilot <subcommand> [options]
 
 Subcommands:
-  scan    Detect outdated / breaking dependencies
+  scan    Detect outdated / breaking dependencies + source usage map
   plan    Generate an upgrade plan with risk scores
   run     Apply codemods and bump versions
   report  Emit a Markdown or JSON upgrade report
@@ -81,6 +85,9 @@ Subcommands:
 Options:
   --path <dir>     Target project directory (default: current directory)
   --format <fmt>   Output format: markdown | json  (default: markdown)
+  --json           Emit scan result as JSON (alias for --format json)
+  --pretty         Pretty-print JSON (adds indentation)
+  --out <file>     Write scan output to file (scan subcommand)
   --dry-run        Simulate without writing files
   --verbose        Verbose agent logging
   -h, --help       Show this help
@@ -88,6 +95,8 @@ Options:
 
 Examples:
   upgradepilot scan   --path ./my-app
+  upgradepilot scan   --path ./my-app --json --pretty
+  upgradepilot scan   --path ./my-app --out ./my-app/usage-map.json
   upgradepilot plan   --path ./my-app
   upgradepilot run    --path ./my-app --dry-run
   upgradepilot report --path ./my-app --format json
@@ -110,19 +119,74 @@ const ctx = {
   format:     opts.format  || 'markdown',
   dryRun:     Boolean(opts['dry-run']),
   verbose:    Boolean(opts.verbose),
+  jsonOut:    Boolean(opts.json),
+  pretty:     Boolean(opts.pretty),
+  outFile:    opts.out || null,
 };
 
 function log(...msg) {
   if (ctx.verbose) console.log('[upgradepilot]', ...msg);
 }
 
+/**
+ * Serialise a scan result as JSON and optionally save to disk.
+ * @param {object} result
+ * @param {object} scanCtx
+ */
+function emitScanResult(result, scanCtx) {
+  const indent  = scanCtx.pretty ? 2 : 0;
+  const output  = JSON.stringify(result, null, indent);
+
+  if (scanCtx.outFile) {
+    const dest = path.resolve(scanCtx.outFile);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, JSON.stringify(result, null, 2), 'utf8');
+    console.error(`[scan] Saved → ${dest}`);
+  }
+
+  console.log(output);
+}
+
 // ─── Subcommand dispatch ─────────────────────────────────────────────────────
 async function main() {
   switch (subcommand) {
     case 'scan': {
-      console.log(`🔍 Scanning ${ctx.targetPath} …`);
+      const useJson = ctx.jsonOut || ctx.format === 'json' || ctx.outFile;
+      if (!useJson) console.error(`🔍 Scanning ${ctx.targetPath} …`);
       const result = await scanner.scan(ctx);
-      console.log(JSON.stringify(result, null, 2));
+
+      if (useJson) {
+        emitScanResult(result, ctx);
+      } else {
+        // --pretty human-readable table when not in JSON mode
+        console.error(`\nSummary: ${result.summary}\n`);
+        const hits = result.riskByRule.filter(r => r.occurrences > 0);
+        if (hits.length) {
+          console.log('Rule'.padEnd(40) + 'Pkg'.padEnd(12) + 'Hits'.padEnd(6) + 'Sev'.padEnd(5) + 'Risk');
+          console.log('─'.repeat(70));
+          for (const r of hits) {
+            console.log(
+              r.ruleId.padEnd(40) +
+              r.package.padEnd(12) +
+              String(r.occurrences).padEnd(6) +
+              String(r.severity).padEnd(5) +
+              r.riskScore
+            );
+          }
+        }
+        console.log('\nTop hits:');
+        for (const [ruleId, hitList] of Object.entries(result.usageMap)) {
+          for (const h of hitList) {
+            console.log(`  [${ruleId}] ${h.file}:${h.line}  ${h.snippet.slice(0, 80)}`);
+          }
+        }
+
+        // Always persist the usage-map to disk on every scan
+        const defaultOut = path.resolve(__dirname, 'out/usage-map.json');
+        fs.mkdirSync(path.dirname(defaultOut), { recursive: true });
+        fs.writeFileSync(defaultOut, JSON.stringify(result, null, 2), 'utf8');
+        console.error(`\n[scan] Saved → ${defaultOut}`);
+      }
       break;
     }
 

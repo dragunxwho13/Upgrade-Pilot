@@ -47,5 +47,15 @@ orderSchema.statics.legacyFindByCustomer = function (customer, cb) {
   return Order.find({ customer }, cb);
 };
 
+/**
+ * LEGACY: .exec(callback) — Mongoose 7 removes callback support from exec().
+ * Mongoose 7 replacement: await Order.find({ customer }).exec()
+ */
+orderSchema.statics.legacyExecFind = function (customer, cb) {
+  return Order.find({ customer }).exec(function (err, docs) {
+    cb(err, docs);
+  });
+};
+
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;

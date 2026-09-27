@@ -1,0 +1,10 @@
+import { scanner } from './src/agents/scanner.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { scanFile, loadRules, buildFlatRules } = scanner;
+const db = loadRules();
+const rules = buildFlatRules(db);
+const fp = path.resolve(__dirname, 'tests/fixtures/clean.js');
+const hits = scanFile(fp, 'clean.js', rules);
+console.log(JSON.stringify(hits, null, 2));

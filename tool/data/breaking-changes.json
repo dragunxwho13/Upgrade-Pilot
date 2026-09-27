@@ -1,0 +1,141 @@
+{
+  "$schema": "../data/breaking-changes.schema.json",
+  "version": "1.0.0",
+  "description": "Known breaking API changes per package, with regex patterns and severity weights used by the scanner to produce a risk-scored usage map.",
+  "packages": [
+    {
+      "package": "express",
+      "fromVersion": "4",
+      "toVersion": "5",
+      "migrationGuide": "https://expressjs.com/en/guide/migrating-5.html",
+      "rules": [
+        {
+          "id": "express/app-del",
+          "description": "app.del() was removed — use app.delete()",
+          "removedPattern": "\\.del(?!ete)\\s*\\(",
+          "patternFlags": "",
+          "replacement": ".delete(",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://expressjs.com/en/guide/migrating-5.html#removed-methods"
+        },
+        {
+          "id": "express/res-send-status",
+          "description": "res.send(number) no longer sets the HTTP status — use res.sendStatus(number)",
+          "removedPattern": "\\.send\\s*\\(\\s*\\d{3}\\s*\\)",
+          "patternFlags": "",
+          "replacement": ".sendStatus($1)",
+          "severity": 3,
+          "category": "changed-behaviour",
+          "docs": "https://expressjs.com/en/guide/migrating-5.html#changes"
+        },
+        {
+          "id": "express/req-param",
+          "description": "req.param(name) was removed — use req.params.name, req.query.name, or req.body.name",
+          "removedPattern": "req\\.param\\s*\\(",
+          "patternFlags": "",
+          "replacement": "req.params.",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://expressjs.com/en/guide/migrating-5.html#removed-methods"
+        },
+        {
+          "id": "express/wildcard-route",
+          "description": "app.get('*') bare-star wildcard route matching changed in Express 5 — use '/{*splat}' or a named wildcard",
+          "removedPattern": "\\.(get|post|put|delete|patch|use|all)\\s*\\(\\s*['\"]\\*['\"]",
+          "patternFlags": "",
+          "replacement": ".$1('/{*splat}'",
+          "severity": 2,
+          "category": "changed-behaviour",
+          "docs": "https://expressjs.com/en/guide/migrating-5.html#path-route-matching-syntax"
+        }
+      ]
+    },
+    {
+      "package": "mongoose",
+      "fromVersion": "6",
+      "toVersion": "7",
+      "migrationGuide": "https://mongoosejs.com/docs/migrating_to_7.html",
+      "rules": [
+        {
+          "id": "mongoose/model-update",
+          "description": "Model.update() was removed — use Model.updateOne() or Model.updateMany()",
+          "removedPattern": "\\.update\\s*\\(",
+          "patternFlags": "",
+          "replacement": ".updateOne(",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://mongoosejs.com/docs/migrating_to_7.html#removed-update"
+        },
+        {
+          "id": "mongoose/model-count",
+          "description": "Model.count() was removed — use Model.countDocuments()",
+          "removedPattern": "\\.count\\s*\\(",
+          "patternFlags": "",
+          "replacement": ".countDocuments(",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://mongoosejs.com/docs/migrating_to_7.html#removed-count"
+        },
+        {
+          "id": "mongoose/callback-query",
+          "description": "Callback-style Mongoose queries removed — use async/await or .then()",
+          "removedPattern": "\\.find\\s*\\([^)]*,\\s*function\\s*\\(",
+          "patternFlags": "",
+          "replacement": "await .find(",
+          "severity": 3,
+          "category": "removed-api",
+          "docs": "https://mongoosejs.com/docs/migrating_to_7.html#no-more-callbacks"
+        },
+        {
+          "id": "mongoose/callback-exec",
+          "description": ".exec(callback) removed — use await query.exec()",
+          "removedPattern": "\\.exec\\s*\\(\\s*function\\s*\\(",
+          "patternFlags": "",
+          "replacement": "await .exec()",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://mongoosejs.com/docs/migrating_to_7.html#no-more-callbacks"
+        },
+        {
+          "id": "mongoose/find-one-and-update-callback",
+          "description": "findOneAndUpdate(filter, update, callback) callback form removed — use async/await",
+          "removedPattern": "\\.findOneAndUpdate\\s*\\([^)]*,\\s*function\\s*\\(",
+          "patternFlags": "",
+          "replacement": "await .findOneAndUpdate(",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://mongoosejs.com/docs/migrating_to_7.html#no-more-callbacks"
+        }
+      ]
+    },
+    {
+      "package": "jest",
+      "fromVersion": "27",
+      "toVersion": "29",
+      "migrationGuide": "https://jestjs.io/docs/upgrading-to-jest29",
+      "rules": [
+        {
+          "id": "jest/set-timeout",
+          "description": "jest.setTimeout() at module top level is deprecated — use testTimeout in jest.config",
+          "removedPattern": "jest\\.setTimeout\\s*\\(",
+          "patternFlags": "",
+          "replacement": "// use testTimeout in jest.config instead",
+          "severity": 1,
+          "category": "deprecated-api",
+          "docs": "https://jestjs.io/docs/upgrading-to-jest29#jestusefaketimers"
+        },
+        {
+          "id": "jest/jasmine-globals",
+          "description": "jasmine.* globals (e.g. jasmine.createSpy) are not available with jest-circus runner",
+          "removedPattern": "jasmine\\.",
+          "patternFlags": "",
+          "replacement": "jest.",
+          "severity": 2,
+          "category": "removed-api",
+          "docs": "https://jestjs.io/docs/upgrading-to-jest28#jasmine-runner-dropped"
+        }
+      ]
+    }
+  ]
+}
