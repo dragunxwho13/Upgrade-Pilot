@@ -191,11 +191,35 @@ async function main() {
     }
 
     case 'plan': {
-      console.log(`📋 Building upgrade plan for ${ctx.targetPath} …`);
-      const scanResult  = await scanner.scan(ctx);
-      const notes       = await librarian.fetchNotes(ctx, scanResult);
-      const plan        = await planner.buildPlan(ctx, scanResult, notes);
-      console.log(JSON.stringify(plan, null, 2));
+      const useJson = ctx.jsonOut || ctx.format === 'json';
+      if (!useJson) console.error(`📋 Building upgrade plan for ${ctx.targetPath} …`);
+
+      const scanResult = await scanner.scan(ctx);
+      const notes      = await librarian.fetchNotes(ctx, scanResult);
+      const plan       = await planner.buildPlan(ctx, scanResult, notes);
+      const markdown   = planner.renderMarkdown(plan);
+
+      // Always persist both artefacts inside tool/out/
+      const outDir  = path.resolve(__dirname, 'out');
+      const jsonDest = ctx.outFile
+        ? path.resolve(ctx.outFile)
+        : path.join(outDir, 'migration-plan.json');
+      const mdDest  = path.join(outDir, 'MIGRATION_PLAN.md');
+
+      if (!ctx.dryRun) {
+        fs.mkdirSync(outDir, { recursive: true });
+        fs.writeFileSync(jsonDest, JSON.stringify(plan, null, 2), 'utf8');
+        fs.writeFileSync(mdDest,   markdown, 'utf8');
+        console.error(`[plan] Saved JSON → ${jsonDest}`);
+        console.error(`[plan] Saved MD   → ${mdDest}`);
+      }
+
+      if (useJson) {
+        const indent = ctx.pretty ? 2 : 0;
+        console.log(JSON.stringify(plan, null, indent));
+      } else {
+        console.log(markdown);
+      }
       break;
     }
 
