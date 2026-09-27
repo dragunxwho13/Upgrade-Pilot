@@ -1,0 +1,16 @@
+{
+  "name": "upgradepilot",
+  "version": "0.1.0",
+  "description": "Agentic dependency-upgrade co-pilot for Node.js projects",
+  "private": true,
+  "workspaces": [
+    "tool",
+    "sample-app"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

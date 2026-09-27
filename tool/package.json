@@ -1,0 +1,21 @@
+{
+  "name": "upgradepilot",
+  "version": "0.1.0",
+  "description": "Agentic dependency-upgrade co-pilot — CLI",
+  "type": "module",
+  "main": "cli.js",
+  "bin": {
+    "upgradepilot": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8"
+  },
+  "keywords": ["upgrade", "dependencies", "codemod", "ai", "cli"],
+  "license": "MIT"
+}

@@ -1,0 +1,22 @@
+﻿# Ignore large / generated / secret paths so Bob doesn't index them
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+tmp/
+temp/
+.cache/
+
+# Secrets / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+serviceAccountKey.json
+*.secret
